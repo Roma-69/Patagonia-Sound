@@ -41,11 +41,11 @@ $valores = @{
     MajorVersion = 0; MinorVersion = 1; Flags = 0xF
     MinInputConnections = 1; MaxInputConnections = 1
     MinOutputConnections = 1; MaxOutputConnections = 1
-    MaxInstances = 0xFFFFFFFF; NumAPOInterfaces = 1; APOInterface0 = $IID_SFX
+    MaxInstances = -1; NumAPOInterfaces = 1; APOInterface0 = $IID_SFX   # -1 = 0xFFFFFFFF (sin límite)
 }
 foreach ($n in $valores.Keys) {
     $tipo = if ($valores[$n] -is [string]) { 'String' } else { 'DWord' }
-    $v = $valores[$n]; if ($tipo -eq 'DWord') { $v = [int][uint32]$v }
+    $v = $valores[$n]; if ($tipo -eq 'DWord') { $v = [int]$v }
     New-ItemProperty -Path $apo -Name $n -Value $v -PropertyType $tipo -Force | Out-Null
 }
 Write-Host '  [3/5] Motor registrado en Windows' -ForegroundColor Green
