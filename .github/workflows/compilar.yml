@@ -54,6 +54,7 @@ jobs:
         run: |
           # La máquina de GitHub no tiene parlantes: tiene que llegar hasta el paso 4
           # y frenar ahí avisando que no hay salidas de sonido.
+          $ErrorActionPreference = 'Continue'
           $salida = & powershell -NoProfile -ExecutionPolicy Bypass -File .\instalador\instalar.ps1 2>&1 | Out-String
           Write-Host $salida
           if ($salida -notmatch '\[3/5\]') { Write-Host '::error::El instalador no llegó al paso 3'; exit 1 }
