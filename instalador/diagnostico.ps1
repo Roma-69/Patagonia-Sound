@@ -38,6 +38,12 @@ foreach ($s in Get-SalidasActivas) {
         if ($fx.$n) { Anotar ("      Efecto viejo ($n): " + $fx.$n) }
     }
 }
+$log = Join-Path $DirDatos 'instalacion.log'
+if (Test-Path $log) {
+    Anotar ''
+    Anotar 'Última instalación:'
+    Get-Content $log | Where-Object { $_ -match '^\s+(\[|\+|x )|error|No pude' } | ForEach-Object { Anotar "  $_" }
+}
 $destino = Join-Path ([Environment]::GetFolderPath('Desktop')) 'diagnostico.txt'
 $informe | Set-Content -Path $destino -Encoding UTF8
 Write-Host ''

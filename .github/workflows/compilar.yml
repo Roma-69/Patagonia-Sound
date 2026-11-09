@@ -45,6 +45,10 @@ jobs:
           }
           if ($mal) { exit 1 }
 
+      - name: Probar que el instalador pueda escribir claves de audio protegidas
+        shell: powershell
+        run: .\instalador\prueba-permisos.ps1
+
       - name: Armar el paquete
         shell: powershell
         run: |
@@ -52,7 +56,7 @@ jobs:
           New-Item -ItemType Directory -Force "$d\instalador" | Out-Null
           Copy-Item PatagoniaSound.dll $d
           Copy-Item instalador\*.cmd $d
-          Copy-Item instalador\*.ps1 "$d\instalador"
+          Copy-Item instalador\*.ps1 "$d\instalador" -Exclude prueba-*
           Copy-Item LEEME.txt $d
           Compress-Archive -Path $d -DestinationPath Patagonia-Sound-prueba.zip -Force
 

@@ -50,8 +50,9 @@ function Enable-PermisoClave([string]$ruta) {
     $acl = $k.GetAccessControl([Security.AccessControl.AccessControlSections]::None)
     $acl.SetOwner($admins)
     $k.SetAccessControl($acl); $k.Close()
+    # Para cambiar los permisos hay que poder leerlos también (ReadPermissions).
     $k = $base.OpenSubKey($ruta, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree,
-        [Security.AccessControl.RegistryRights]::ChangePermissions)
+        [Security.AccessControl.RegistryRights]'ReadPermissions, ChangePermissions')
     $acl = $k.GetAccessControl()
     $regla = New-Object Security.AccessControl.RegistryAccessRule($admins, 'FullControl',
         'ContainerInherit', 'None', 'Allow')

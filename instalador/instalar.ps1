@@ -4,6 +4,8 @@
 . (Join-Path $PSScriptRoot 'comun.ps1')
 
 if (-not (Test-Admin)) { throw 'Hay que ejecutarlo como administrador.' }
+New-Item -ItemType Directory -Force -Path $DirDatos | Out-Null
+Start-Transcript -Path (Join-Path $DirDatos 'instalacion.log') -Force | Out-Null
 
 Write-Host ''
 Write-Host '  Patagonia Sound - instalando el motor' -ForegroundColor Cyan
@@ -51,29 +53,36 @@ Write-Host '  [3/5] Motor registrado en Windows' -ForegroundColor Green
 # 4. Engancharlo en cada salida de sonido activa.
 $salidas = @(Get-SalidasActivas)
 if ($salidas.Count -eq 0) { throw 'No encontré ninguna salida de sonido activa.' }
+$enganchadas = 0
 foreach ($s in $salidas) {
-    $ruta = "$RaizRender\$($s.Id)"
-    $respaldo = Join-Path $DirRespaldo "$($s.Id).reg"
-    if (-not (Test-Path $respaldo)) {
-        # Respaldo completo de la salida, una sola vez (la primera instalación).
-        & reg.exe export "HKLM\$ruta" $respaldo /y /reg:64 | Out-Null
+    try {
+        $ruta = "$RaizRender\$($s.Id)"
+        $respaldo = Join-Path $DirRespaldo "$($s.Id).reg"
+        if (-not (Test-Path $respaldo)) {
+            # Respaldo completo de la salida, una sola vez (la primera instalación).
+            & reg.exe export "HKLM\$ruta" $respaldo /y /reg:64 | Out-Null
+        }
+        Enable-PermisoClave $ruta
+        if (-not (Test-Path "HKLM:\$ruta\FxProperties")) { New-Item -Path "HKLM:\$ruta\FxProperties" | Out-Null }
+        Enable-PermisoClave "$ruta\FxProperties"
+        Enable-PermisoClave "$ruta\Properties"
+
+        $fx = Get-ItemProperty "HKLM:\$ruta\FxProperties"
+        $lista = @()
+        if ($fx.$K_SFX_COMPUESTO) { $lista = @($fx.$K_SFX_COMPUESTO) }
+        elseif ($fx.$K_SFX_SIMPLE) { $lista = @($fx.$K_SFX_SIMPLE) }   # se conserva el efecto del driver
+        $lista = @($lista | Where-Object { $_ -and ($_ -ne $CLSID) }) + $CLSID
+        New-ItemProperty -Path "HKLM:\$ruta\FxProperties" -Name $K_SFX_COMPUESTO -Value ([string[]]$lista) -PropertyType MultiString -Force | Out-Null
+
+        # Si las "Mejoras de audio" están apagadas, Windows saltea todos los efectos.
+        New-ItemProperty -Path "HKLM:\$ruta\Properties" -Name $K_SIN_EFECTOS -Value 0 -PropertyType DWord -Force | Out-Null
+        Write-Host "        + $($s.Nombre)"
+        $enganchadas++
+    } catch {
+        Write-Host "        x $($s.Nombre): $($_.Exception.Message)" -ForegroundColor Red
     }
-    Enable-PermisoClave $ruta
-    if (-not (Test-Path "HKLM:\$ruta\FxProperties")) { New-Item -Path "HKLM:\$ruta\FxProperties" | Out-Null }
-    Enable-PermisoClave "$ruta\FxProperties"
-    Enable-PermisoClave "$ruta\Properties"
-
-    $fx = Get-ItemProperty "HKLM:\$ruta\FxProperties"
-    $lista = @()
-    if ($fx.$K_SFX_COMPUESTO) { $lista = @($fx.$K_SFX_COMPUESTO) }
-    elseif ($fx.$K_SFX_SIMPLE) { $lista = @($fx.$K_SFX_SIMPLE) }   # se conserva el efecto del driver
-    $lista = @($lista | Where-Object { $_ -and ($_ -ne $CLSID) }) + $CLSID
-    New-ItemProperty -Path "HKLM:\$ruta\FxProperties" -Name $K_SFX_COMPUESTO -Value ([string[]]$lista) -PropertyType MultiString -Force | Out-Null
-
-    # Si las "Mejoras de audio" están apagadas, Windows saltea todos los efectos.
-    New-ItemProperty -Path "HKLM:\$ruta\Properties" -Name $K_SIN_EFECTOS -Value 0 -PropertyType DWord -Force | Out-Null
-    Write-Host "        + $($s.Nombre)"
 }
+if ($enganchadas -eq 0) { throw 'No pude enganchar el motor en ninguna salida de sonido (ver arriba).' }
 Write-Host '  [4/5] Enganchado en las salidas de sonido' -ForegroundColor Green
 
 # 5. Reiniciar el audio de Windows para que cargue el motor.
@@ -84,3 +93,4 @@ Write-Host ''
 Write-Host '  Listo. Poné música (un tema con bajo) y después abrí "Diagnostico.cmd".' -ForegroundColor Cyan
 Write-Host '  Si algo sale mal o te quedás sin sonido: "Rescate.cmd".' -ForegroundColor Yellow
 Write-Host ''
+Stop-Transcript | Out-Null
