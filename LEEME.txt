@@ -1,0 +1,32 @@
+PATAGONIA SOUND - PRUEBA DEL MOTOR (PASO 1)
+===========================================
+
+Qué hace esta prueba
+--------------------
+Instala el motor de sonido propio de Patagonia y le pone a toda la PC un
+refuerzo de graves de +8 dB. Si al instalarlo los graves se notan más,
+Windows cargó el motor y se puede seguir con el ecualizador completo.
+
+Cómo probarlo
+-------------
+1. Descomprimí este zip en una carpeta (por ejemplo, en el Escritorio).
+2. Poné un tema con bajo (YouTube, Spotify) y escuchalo unos segundos.
+3. Doble clic en "Instalar.cmd" y aceptá el permiso de administrador.
+   El sonido se corta un segundo mientras Windows reinicia el audio.
+4. Volvé a poner el tema: los graves tendrían que pegar bastante más.
+5. Doble clic en "Diagnostico.cmd": te dice si el motor arrancó y deja
+   un informe "diagnostico.txt" en el Escritorio.
+
+Si algo sale mal
+----------------
+Si te quedás sin sonido, suena raro o cualquier cosa extraña:
+doble clic en "Rescate.cmd". Deja el sonido exactamente como estaba antes
+de instalar (usa un respaldo que se guarda al instalar).
+
+Cambiar cuánto suben los graves
+-------------------------------
+Abrí con el Bloc de notas: C:\ProgramData\Patagonia Sound\ajustes.ini
+  graves=8   -> entre -12 y 12 (dB)
+  activo=1   -> 0 para apagarlo sin desinstalar
+El cambio se aplica la próxima vez que empiece a sonar algo
+(pausá y volvé a dar play).

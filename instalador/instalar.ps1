@@ -1,0 +1,86 @@
+﻿# Instala el motor de Patagonia Sound (paso 1: prueba de graves).
+# Antes de tocar nada guarda un respaldo de cada salida de sonido, para que
+# "Rescate" deje todo exactamente como estaba.
+. (Join-Path $PSScriptRoot 'comun.ps1')
+
+if (-not (Test-Admin)) { throw 'Hay que ejecutarlo como administrador.' }
+
+Write-Host ''
+Write-Host '  Patagonia Sound - instalando el motor' -ForegroundColor Cyan
+Write-Host ''
+
+# 1. Copiar el motor.
+$dll = Join-Path (Split-Path $PSScriptRoot) 'PatagoniaSound.dll'
+Unblock-File $dll -ErrorAction SilentlyContinue
+if (-not (Test-Path $dll)) { throw "No encuentro PatagoniaSound.dll al lado del instalador." }
+New-Item -ItemType Directory -Force -Path $DirPrograma, $DirDatos, $DirRespaldo | Out-Null
+Copy-Item $dll (Join-Path $DirPrograma 'PatagoniaSound.dll') -Force
+Write-Host '  [1/5] Motor copiado' -ForegroundColor Green
+
+# 2. Ajustes y permisos: el motor corre como "Servicio local" (audiodg.exe) y
+#    tiene que poder leer los ajustes y anotar si arrancó.
+$ini = Join-Path $DirDatos 'ajustes.ini'
+if (-not (Test-Path $ini)) { "[motor]`r`nactivo=1`r`ngraves=8`r`n" | Set-Content -Path $ini -Encoding ASCII }
+& icacls $DirDatos /grant '*S-1-5-19:(OI)(CI)M' '*S-1-15-2-1:(OI)(CI)RX' /T /Q | Out-Null
+& icacls $DirPrograma /grant '*S-1-5-19:(OI)(CI)RX' '*S-1-15-2-1:(OI)(CI)RX' /T /Q | Out-Null
+Write-Host '  [2/5] Ajustes listos (graves +8 dB)' -ForegroundColor Green
+
+# 3. Registrar el motor en Windows (COM + catálogo de efectos de audio).
+$com = "HKLM:\SOFTWARE\Classes\CLSID\$CLSID"
+New-Item -Force -Path "$com\InprocServer32" | Out-Null
+Set-ItemProperty -Path $com -Name '(default)' -Value 'Patagonia Sound'
+Set-ItemProperty -Path "$com\InprocServer32" -Name '(default)' -Value (Join-Path $DirPrograma 'PatagoniaSound.dll')
+Set-ItemProperty -Path "$com\InprocServer32" -Name 'ThreadingModel' -Value 'Both'
+
+$apo = "HKLM:\SOFTWARE\Classes\AudioEngine\AudioProcessingObjects\$CLSID"
+New-Item -Force -Path $apo | Out-Null
+$valores = @{
+    FriendlyName = 'Patagonia Sound'; Copyright = 'Roma.69'
+    MajorVersion = 0; MinorVersion = 1; Flags = 0xF
+    MinInputConnections = 1; MaxInputConnections = 1
+    MinOutputConnections = 1; MaxOutputConnections = 1
+    MaxInstances = 0xFFFFFFFF; NumAPOInterfaces = 1; APOInterface0 = $IID_SFX
+}
+foreach ($n in $valores.Keys) {
+    $tipo = if ($valores[$n] -is [string]) { 'String' } else { 'DWord' }
+    $v = $valores[$n]; if ($tipo -eq 'DWord') { $v = [int][uint32]$v }
+    New-ItemProperty -Path $apo -Name $n -Value $v -PropertyType $tipo -Force | Out-Null
+}
+Write-Host '  [3/5] Motor registrado en Windows' -ForegroundColor Green
+
+# 4. Engancharlo en cada salida de sonido activa.
+$salidas = @(Get-SalidasActivas)
+if ($salidas.Count -eq 0) { throw 'No encontré ninguna salida de sonido activa.' }
+foreach ($s in $salidas) {
+    $ruta = "$RaizRender\$($s.Id)"
+    $respaldo = Join-Path $DirRespaldo "$($s.Id).reg"
+    if (-not (Test-Path $respaldo)) {
+        # Respaldo completo de la salida, una sola vez (la primera instalación).
+        & reg.exe export "HKLM\$ruta" $respaldo /y /reg:64 | Out-Null
+    }
+    Enable-PermisoClave $ruta
+    if (-not (Test-Path "HKLM:\$ruta\FxProperties")) { New-Item -Path "HKLM:\$ruta\FxProperties" | Out-Null }
+    Enable-PermisoClave "$ruta\FxProperties"
+    Enable-PermisoClave "$ruta\Properties"
+
+    $fx = Get-ItemProperty "HKLM:\$ruta\FxProperties"
+    $lista = @()
+    if ($fx.$K_SFX_COMPUESTO) { $lista = @($fx.$K_SFX_COMPUESTO) }
+    elseif ($fx.$K_SFX_SIMPLE) { $lista = @($fx.$K_SFX_SIMPLE) }   # se conserva el efecto del driver
+    $lista = @($lista | Where-Object { $_ -and ($_ -ne $CLSID) }) + $CLSID
+    New-ItemProperty -Path "HKLM:\$ruta\FxProperties" -Name $K_SFX_COMPUESTO -Value ([string[]]$lista) -PropertyType MultiString -Force | Out-Null
+
+    # Si las "Mejoras de audio" están apagadas, Windows saltea todos los efectos.
+    New-ItemProperty -Path "HKLM:\$ruta\Properties" -Name $K_SIN_EFECTOS -Value 0 -PropertyType DWord -Force | Out-Null
+    Write-Host "        + $($s.Nombre)"
+}
+Write-Host '  [4/5] Enganchado en las salidas de sonido' -ForegroundColor Green
+
+# 5. Reiniciar el audio de Windows para que cargue el motor.
+Remove-Item (Join-Path $DirDatos 'estado.txt') -ErrorAction SilentlyContinue
+Restart-Audio
+Write-Host '  [5/5] Audio de Windows reiniciado' -ForegroundColor Green
+Write-Host ''
+Write-Host '  Listo. Poné música (un tema con bajo) y después abrí "Diagnostico.cmd".' -ForegroundColor Cyan
+Write-Host '  Si algo sale mal o te quedás sin sonido: "Rescate.cmd".' -ForegroundColor Yellow
+Write-Host ''

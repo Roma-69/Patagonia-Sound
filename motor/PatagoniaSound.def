@@ -1,0 +1,4 @@
+LIBRARY PatagoniaSound
+EXPORTS
+    DllGetClassObject PRIVATE
+    DllCanUnloadNow PRIVATE
