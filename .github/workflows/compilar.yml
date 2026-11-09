@@ -59,6 +59,7 @@ jobs:
           Write-Host $salida
           if ($salida -notmatch '\[3/5\]') { Write-Host '::error::El instalador no llegó al paso 3'; exit 1 }
           $apo = Get-ItemProperty 'HKLM:\SOFTWARE\Classes\AudioEngine\AudioProcessingObjects\{C90115C4-8422-4C4D-B4B4-F1EBF7E03B4D}'
+          $apo | Format-List | Out-String | Write-Host
           if ($apo.MaxInstances -ne -1 -or $apo.APOInterface0 -ne '{5FA00F27-ADD6-499A-8A9D-6B98521FA75B}') { Write-Host '::error::Registro del motor incompleto'; exit 1 }
           if (-not (Test-Path "$env:ProgramFiles\Patagonia Sound\PatagoniaSound.dll")) { Write-Host '::error::No copió la DLL'; exit 1 }
           Write-Host 'OK: el instalador registra el motor bien.'
