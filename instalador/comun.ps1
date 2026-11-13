@@ -6,6 +6,7 @@ $Script:IID_SFX     = '{5FA00F27-ADD6-499A-8A9D-6B98521FA75B}'   # IAudioSystemE
 $Script:DirPrograma = Join-Path $env:ProgramFiles 'Patagonia Sound'
 $Script:DirDatos    = Join-Path $env:ProgramData 'Patagonia Sound'
 $Script:DirRespaldo = Join-Path $Script:DirDatos 'respaldo'
+$Script:ClaveAudio  = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Audio'
 $Script:RaizRender  = 'SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Render'
 
 # Claves de efectos de Windows (documentadas por Microsoft para drivers de audio).
