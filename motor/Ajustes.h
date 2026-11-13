@@ -42,7 +42,7 @@ struct Ajustes {
         GetLocalTime(&t);
         char texto[256];
         const int n = sprintf_s(texto,
-            "Motor Patagonia Sound CARGADO\r\nFecha: %02u/%02u/%04u %02u:%02u:%02u\r\n"
+            "Motor Patagonia Sound FDX CARGADO\r\nFecha: %02u/%02u/%04u %02u:%02u:%02u\r\n"
             "Audio: %.0f Hz, %u canales\r\nActivo: %s\r\nGraves: %+.0f dB\r\n",
             t.wDay, t.wMonth, t.wYear, t.wHour, t.wMinute, t.wSecond,
             static_cast<double>(frecuencia), canales, a.activo ? "si" : "no", a.graves);

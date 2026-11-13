@@ -1,4 +1,4 @@
-// Patagonia Sound: motor de audio propio para Windows.
+// Patagonia Sound FDX: motor de audio propio para Windows.
 // Es un "APO" (Audio Processing Object): una DLL que el motor de audio de Windows
 // (audiodg.exe) carga y mete en la cadena de cada salida de sonido.
 //
@@ -122,7 +122,7 @@ public:
         p->clsid = CLSID_PatagoniaSound;
         p->Flags = static_cast<APO_FLAG>(APO_FLAG_INPLACE | APO_FLAG_SAMPLESPERFRAME_MUST_MATCH |
                                          APO_FLAG_FRAMESPERSECOND_MUST_MATCH | APO_FLAG_BITSPERSAMPLE_MUST_MATCH);
-        wcscpy_s(p->szFriendlyName, L"Patagonia Sound");
+        wcscpy_s(p->szFriendlyName, L"Patagonia Sound FDX");
         wcscpy_s(p->szCopyrightInfo, L"Roma.69");
         p->u32MajorVersion = 0;
         p->u32MinorVersion = 1;

@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Force -Path $DirDatos | Out-Null
 Start-Transcript -Path (Join-Path $DirDatos 'instalacion.log') -Force | Out-Null
 
 Write-Host ''
-Write-Host '  Patagonia Sound - instalando el motor' -ForegroundColor Cyan
+Write-Host '  Patagonia Sound FDX - instalando el motor' -ForegroundColor Cyan
 Write-Host ''
 
 # 1. Copiar el motor.
@@ -40,14 +40,14 @@ New-ItemProperty -Path $ClaveAudio -Name DisableProtectedAudioDG -Value 1 -Prope
 # 3. Registrar el motor en Windows (COM + catálogo de efectos de audio).
 $com = "HKLM:\SOFTWARE\Classes\CLSID\$CLSID"
 New-Item -Force -Path "$com\InprocServer32" | Out-Null
-Set-ItemProperty -Path $com -Name '(default)' -Value 'Patagonia Sound'
+Set-ItemProperty -Path $com -Name '(default)' -Value 'Patagonia Sound FDX'
 Set-ItemProperty -Path "$com\InprocServer32" -Name '(default)' -Value (Join-Path $DirPrograma 'PatagoniaSound.dll')
 Set-ItemProperty -Path "$com\InprocServer32" -Name 'ThreadingModel' -Value 'Both'
 
 $apo = "HKLM:\SOFTWARE\Classes\AudioEngine\AudioProcessingObjects\$CLSID"
 New-Item -Force -Path $apo | Out-Null
 $valores = @{
-    FriendlyName = 'Patagonia Sound'; Copyright = 'Roma.69'
+    FriendlyName = 'Patagonia Sound FDX'; Copyright = 'Roma.69'
     MajorVersion = 0; MinorVersion = 1; Flags = 0xF
     MinInputConnections = 1; MaxInputConnections = 1
     MinOutputConnections = 1; MaxOutputConnections = 1

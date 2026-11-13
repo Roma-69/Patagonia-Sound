@@ -1,4 +1,4 @@
-name: Compilar Patagonia Sound
+name: Compilar Patagonia Sound FDX
 
 on:
   push:
@@ -71,19 +71,19 @@ jobs:
       - name: Armar el paquete
         shell: powershell
         run: |
-          $d = 'paquete\Patagonia-Sound'
+          $d = 'paquete\Patagonia-Sound-FDX'
           New-Item -ItemType Directory -Force "$d\instalador" | Out-Null
           Copy-Item PatagoniaSound.dll $d
           Copy-Item instalador\*.cmd $d
           Copy-Item instalador\*.ps1 "$d\instalador" -Exclude prueba-*
           Copy-Item LEEME.txt $d
-          Compress-Archive -Path $d -DestinationPath Patagonia-Sound-prueba.zip -Force
+          Compress-Archive -Path $d -DestinationPath Patagonia-Sound-FDX.zip -Force
 
       - name: Guardar el paquete
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: Patagonia-Sound-prueba
-          path: Patagonia-Sound-prueba.zip
+          name: Patagonia-Sound-FDX
+          path: Patagonia-Sound-FDX.zip
 
   publicar:
     name: Publicar la versión de prueba (solo main)
@@ -96,17 +96,17 @@ jobs:
       - name: Traer el paquete compilado
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: Patagonia-Sound-prueba
+          name: Patagonia-Sound-FDX
 
       # En main, el paquete queda siempre en el mismo link para bajarlo directo:
-      # https://github.com/Roma-69/Patagonia-Sound/releases/download/motor-prueba/Patagonia-Sound-prueba.zip
+      # https://github.com/Roma-69/Patagonia-Sound/releases/download/motor-prueba/Patagonia-Sound-FDX.zip
       - name: Publicar la versión de prueba
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete motor-prueba --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
-          gh release create motor-prueba Patagonia-Sound-prueba.zip --repo "$GITHUB_REPOSITORY" \
+          gh release create motor-prueba Patagonia-Sound-FDX.zip --repo "$GITHUB_REPOSITORY" \
             --prerelease --target "$GITHUB_SHA" \
-            --title "Motor de prueba (${GITHUB_SHA::7})" \
-            --notes "Paso 1: prueba del motor propio de Patagonia Sound (refuerzo de graves). Bajá el zip, descomprimilo y seguí LEEME.txt."
+            --title "Patagonia Sound FDX - motor de prueba (${GITHUB_SHA::7})" \
+            --notes "Paso 1: prueba del motor propio de Patagonia Sound FDX (refuerzo de graves). Bajá el zip, descomprimilo y seguí LEEME.txt."
