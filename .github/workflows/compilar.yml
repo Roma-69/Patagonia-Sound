@@ -34,6 +34,13 @@ jobs:
           /Fe:PatagoniaSound.dll
           /link /DEF:motor\PatagoniaSound.def /MANIFEST:NO ole32.lib uuid.lib
 
+      - name: Probar el procesamiento de sonido (ecualizador, ganancia, limitador)
+        shell: cmd
+        run: |
+          cl /nologo /O2 /EHsc /std:c++17 /W4 /I motor pruebas\prueba_procesador.cpp /Fe:prueba.exe
+          if errorlevel 1 exit /b 1
+          prueba.exe
+
       - name: Revisar la DLL (exporta lo que Windows necesita)
         shell: cmd
         run: dumpbin /exports PatagoniaSound.dll | findstr /C:"DllGetClassObject" /C:"DllCanUnloadNow"

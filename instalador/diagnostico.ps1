@@ -35,6 +35,12 @@ foreach ($s in Get-SalidasActivas) {
     $pr = Get-ItemProperty "HKLM:\$RaizRender\$($s.Id)\Properties" -ErrorAction SilentlyContinue
     $lista = @($fx.$K_SFX_COMPUESTO)
     Anotar ("  - " + $s.Nombre)
+    $fmt = (Get-ItemProperty "HKLM:\$RaizRender\$($s.Id)\Properties" -ErrorAction SilentlyContinue).'{f19f064d-082c-4e27-bc73-6882a1bb8e4c},0'
+    if ($fmt) {
+        $hz = [BitConverter]::ToUInt32($fmt, 12); $can = [BitConverter]::ToUInt16($fmt, 10)
+        if ($hz -gt 96000) { Anotar ("      Formato: $can canales, $hz Hz  <-- ATENCIÓN: a más de 96000 Hz el motor no actúa. Bajala a 48000 Hz.") 'Yellow' }
+        else { Anotar ("      Formato: $can canales, $hz Hz") }
+    }
     Anotar ("      Patagonia enganchado: " + ($lista -contains $CLSID) + " | efectos: " + ($lista -join ', '))
     Anotar ("      Efecto simple del driver: " + $fx.$K_SFX_SIMPLE + " | Mejoras apagadas: " + $pr.$K_SIN_EFECTOS)
     foreach ($n in '{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},1', '{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},2') {
