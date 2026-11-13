@@ -41,6 +41,15 @@ foreach ($d in Get-ChildItem "HKLM:\$RaizRender") {
 }
 Write-Host '  [1/3] Salidas de sonido como estaban' -ForegroundColor Green
 
+# Audio protegido: como estaba antes de instalar.
+$marca = Join-Path $DirRespaldo 'audio-protegido.txt'
+if (Test-Path $marca) {
+    $antes = (Get-Content $marca -Raw).Trim()
+    if ($antes -eq 'no-existia') { Remove-ItemProperty $ClaveAudio -Name DisableProtectedAudioDG -ErrorAction SilentlyContinue }
+    else { New-ItemProperty -Path $ClaveAudio -Name DisableProtectedAudioDG -Value ([int]$antes) -PropertyType DWord -Force | Out-Null }
+    Remove-Item $marca -Force
+}
+
 # 3. Desregistrar y reiniciar el audio (así Windows suelta la DLL).
 Remove-Item "HKLM:\SOFTWARE\Classes\AudioEngine\AudioProcessingObjects\$CLSID" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item "HKLM:\SOFTWARE\Classes\CLSID\$CLSID" -Recurse -Force -ErrorAction SilentlyContinue

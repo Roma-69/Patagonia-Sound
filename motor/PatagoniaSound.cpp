@@ -16,6 +16,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <xmmintrin.h>
+#include <pmmintrin.h>
 
 #ifdef _MSC_VER
 #include <audioenginebaseapo.h>
@@ -193,20 +195,31 @@ public:
         auto* in = reinterpret_cast<const float*>(entrada->pBuffer);
         auto* out = reinterpret_cast<float*>(salida->pBuffer);
 
-        if (entrada->u32BufferFlags == BUFFER_SILENT || !ajustes_.activo || numCanales_ == 0) {
-            if (out != in && entrada->u32BufferFlags != BUFFER_SILENT)
-                std::memcpy(out, in, sizeof(float) * cuadros * numCanales_);
+        if (entrada->u32BufferFlags == BUFFER_SILENT || !ajustes_.activo || ajustes_.graves == 0.0 ||
+            numCanales_ == 0) {
+            // Sin nada que hacer: el sonido pasa tal cual (o silencio limpio).
+            if (out != in) {
+                if (entrada->u32BufferFlags == BUFFER_SILENT) std::memset(out, 0, sizeof(float) * cuadros * numCanales_);
+                else std::memcpy(out, in, sizeof(float) * cuadros * numCanales_);
+            }
             salida->u32ValidFrameCount = cuadros;
             salida->u32BufferFlags = entrada->u32BufferFlags;
             return;
         }
 
+        // Números minúsculos ("denormales") que deja el filtro al apagarse un sonido
+        // pueden hacer que el procesador se arrastre y el audio salga robótico:
+        // se tratan como cero mientras dura este bloque y después se deja todo como estaba.
+        const unsigned int mxcsrAnterior = _mm_getcsr();
+        _mm_setcsr(mxcsrAnterior | 0x8040); // FTZ + DAZ
+
         const UINT32 canalesFiltrados = numCanales_ < MAX_CANALES ? numCanales_ : MAX_CANALES;
         const Biquad f = filtro_;
+        const float g = preGanancia_;
         for (UINT32 i = 0; i < cuadros; ++i) {
             for (UINT32 c = 0; c < numCanales_; ++c) {
                 const size_t k = static_cast<size_t>(i) * numCanales_ + c;
-                double x = in[k] * preGanancia_;
+                double x = static_cast<double>(in[k]) * g;
                 if (c < canalesFiltrados) {
                     EstadoCanal& e = canales_[c];
                     // Forma directa transpuesta II.
@@ -215,11 +228,13 @@ public:
                     e.z2 = f.b2 * x - f.a2 * y;
                     x = y;
                 }
-                // Tope de seguridad: nunca pasar de 0 dBFS.
-                if (x > 1.0) x = 1.0; else if (x < -1.0) x = -1.0;
+                // Sin tope acá: los efectos de la placa que van antes pueden mandar
+                // sonido por encima de 1.0 a propósito, y recortarlo lo dejaba como
+                // una lata. El tope final lo pone Windows; el limitador propio viene después.
                 out[k] = static_cast<float>(x);
             }
         }
+        _mm_setcsr(mxcsrAnterior);
         salida->u32ValidFrameCount = cuadros;
         salida->u32BufferFlags = BUFFER_VALID;
     }

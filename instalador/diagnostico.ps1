@@ -11,9 +11,12 @@ Anotar ("Windows: " + (Get-CimInstance Win32_OperatingSystem).Caption + ' ' + [E
 Anotar ''
 
 $estado = Join-Path $DirDatos 'estado.txt'
-if (Test-Path $estado) {
+$cargado = [bool](Get-Process audiodg -ErrorAction SilentlyContinue | Where-Object {
+    try { $_.Modules.ModuleName -contains 'PatagoniaSound.dll' } catch { $false } })
+if (-not $cargado) { $cargado = [bool]((& tasklist /m PatagoniaSound.dll 2>$null) -match 'audiodg') }
+if ($cargado -or (Test-Path $estado)) {
     Anotar 'MOTOR CARGADO: Windows está pasando el sonido por Patagonia Sound.' 'Green'
-    Get-Content $estado | ForEach-Object { Anotar "   $_" }
+    if (Test-Path $estado) { Get-Content $estado | ForEach-Object { Anotar "   $_" } }
 } else {
     Anotar 'El motor TODAVÍA NO arrancó.' 'Yellow'
     Anotar '   Poné algo a sonar (YouTube, Spotify) unos segundos y volvé a abrir este diagnóstico.'

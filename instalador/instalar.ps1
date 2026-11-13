@@ -27,6 +27,16 @@ if (-not (Test-Path $ini)) { "[motor]`r`nactivo=1`r`ngraves=8`r`n" | Set-Content
 & icacls $DirPrograma /grant '*S-1-5-19:(OI)(CI)RX' '*S-1-15-2-1:(OI)(CI)RX' /T /Q | Out-Null
 Write-Host '  [2/5] Ajustes listos (graves +8 dB)' -ForegroundColor Green
 
+# Windows corre el audio "protegido" y así no carga motores sin firma digital
+# (lo mismo que necesita Equalizer APO). Se guarda cómo estaba para que Rescate lo deje igual.
+$marca = Join-Path $DirRespaldo 'audio-protegido.txt'
+if (-not (Test-Path $marca)) {
+    $antes = (Get-ItemProperty $ClaveAudio -Name DisableProtectedAudioDG -ErrorAction SilentlyContinue).DisableProtectedAudioDG
+    $(if ($null -eq $antes) { 'no-existia' } else { "$antes" }) | Set-Content $marca -Encoding ASCII
+}
+if (-not (Test-Path $ClaveAudio)) { New-Item -Path $ClaveAudio | Out-Null }
+New-ItemProperty -Path $ClaveAudio -Name DisableProtectedAudioDG -Value 1 -PropertyType DWord -Force | Out-Null
+
 # 3. Registrar el motor en Windows (COM + catálogo de efectos de audio).
 $com = "HKLM:\SOFTWARE\Classes\CLSID\$CLSID"
 New-Item -Force -Path "$com\InprocServer32" | Out-Null
@@ -57,15 +67,18 @@ $enganchadas = 0
 foreach ($s in $salidas) {
     try {
         $ruta = "$RaizRender\$($s.Id)"
+        Enable-PermisoClave $ruta
+        if (Test-Path "HKLM:\$ruta\FxProperties") { Enable-PermisoClave "$ruta\FxProperties" }
+        Enable-PermisoClave "$ruta\Properties"
         $respaldo = Join-Path $DirRespaldo "$($s.Id).reg"
         if (-not (Test-Path $respaldo)) {
-            # Respaldo completo de la salida, una sola vez (la primera instalación).
-            & reg.exe export "HKLM\$ruta" $respaldo /y /reg:64 | Out-Null
+            # Respaldo completo de la salida, una sola vez (la primera instalación),
+            # ya con permiso de lectura. Sin respaldo no se toca la salida.
+            & reg.exe export "HKLM\$ruta" $respaldo /y /reg:64 2>&1 | Out-Null
+            if (-not (Test-Path $respaldo)) { throw 'no pude guardar el respaldo, no la toco' }
         }
-        Enable-PermisoClave $ruta
         if (-not (Test-Path "HKLM:\$ruta\FxProperties")) { New-Item -Path "HKLM:\$ruta\FxProperties" | Out-Null }
         Enable-PermisoClave "$ruta\FxProperties"
-        Enable-PermisoClave "$ruta\Properties"
 
         $fx = Get-ItemProperty "HKLM:\$ruta\FxProperties"
         $lista = @()
