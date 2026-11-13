@@ -1,4 +1,4 @@
-# Patagonia Sound
+# Patagonia Sound FDX
 
 Ecualizador para Windows con **motor propio**, de la familia Patagonia (Roma.69).
 
@@ -18,7 +18,7 @@ Próximos pasos: ecualizador de 10 bandas, efectos (claridad, amplitud estéreo,
 
 ## Probarlo
 
-Bajá [Patagonia-Sound-prueba.zip](https://github.com/Roma-69/Patagonia-Sound/releases/download/motor-prueba/Patagonia-Sound-prueba.zip) y seguí `LEEME.txt`.
+Bajá [Patagonia-Sound-FDX.zip](https://github.com/Roma-69/Patagonia-Sound/releases/download/motor-prueba/Patagonia-Sound-FDX.zip) y seguí `LEEME.txt`.
 
 ## Compilar
 

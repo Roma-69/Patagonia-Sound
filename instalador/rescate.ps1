@@ -4,7 +4,7 @@
 if (-not (Test-Admin)) { throw 'Hay que ejecutarlo como administrador.' }
 
 Write-Host ''
-Write-Host '  Patagonia Sound - rescate' -ForegroundColor Yellow
+Write-Host '  Patagonia Sound FDX - rescate' -ForegroundColor Yellow
 Write-Host ''
 
 # 1. Restaurar cada salida desde su respaldo.
@@ -59,6 +59,6 @@ Write-Host '  [2/3] Motor desregistrado y audio reiniciado' -ForegroundColor Gre
 Remove-Item $DirPrograma -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host '  [3/3] Archivos del motor borrados' -ForegroundColor Green
 Write-Host ''
-Write-Host '  Listo: el sonido quedó como antes de instalar Patagonia Sound.' -ForegroundColor Cyan
+Write-Host '  Listo: el sonido quedó como antes de instalar Patagonia Sound FDX.' -ForegroundColor Cyan
 Write-Host '  (Los respaldos quedan en C:\ProgramData\Patagonia Sound por si hicieran falta.)'
 Write-Host ''
