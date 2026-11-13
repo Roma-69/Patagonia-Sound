@@ -1,32 +1,47 @@
-PATAGONIA SOUND FDX - PRUEBA DEL MOTOR (PASO 1)
-===========================================
+PATAGONIA SOUND FDX - MOTOR DE SONIDO
+====================================
 
-Qué hace esta prueba
---------------------
-Instala el motor de sonido propio de Patagonia y le pone a toda la PC un
-refuerzo de graves de +8 dB. Si al instalarlo los graves se notan más,
-Windows cargó el motor y se puede seguir con el ecualizador completo.
+Qué hace
+--------
+Pasa todo el sonido de la PC por el motor propio de Patagonia:
+refuerzo de graves, ecualizador de 10 bandas, ganancia y un limitador que
+no deja saturar (el sonido nunca pasa de -1 dB).
 
-Cómo probarlo
--------------
-1. Descomprimí este zip en una carpeta (por ejemplo, en el Escritorio).
-2. Poné un tema con bajo (YouTube, Spotify) y escuchalo unos segundos.
+Cómo instalarlo
+---------------
+1. Descomprimí este zip en una carpeta (por ejemplo, en Descargas).
+2. Si ya tenías una versión anterior instalada: doble clic en "Rescate.cmd"
+   primero (saca el motor viejo para poder reemplazarlo).
 3. Doble clic en "Instalar.cmd" y aceptá el permiso de administrador.
    El sonido se corta un segundo mientras Windows reinicia el audio.
-4. Volvé a poner el tema: los graves tendrían que pegar bastante más.
-5. Doble clic en "Diagnostico.cmd": te dice si el motor arrancó y deja
-   un informe "diagnostico.txt" en el Escritorio.
+4. Poné un tema y doble clic en "Diagnostico.cmd": te dice si el motor
+   arrancó y deja un informe "diagnostico.txt" en el Escritorio.
+
+IMPORTANTE: la salida de sonido tiene que estar en 48000 Hz (o 44100/96000).
+A más de 96000 Hz el motor deja pasar el sonido sin tocarlo, y el
+diagnóstico te avisa. Para cambiarlo: Windows + R -> mmsys.cpl ->
+Reproducción -> tu salida -> Propiedades -> Opciones avanzadas ->
+"24 bits, 48000 Hz".
 
 Si algo sale mal
 ----------------
-Si te quedás sin sonido, suena raro o cualquier cosa extraña:
-doble clic en "Rescate.cmd". Deja el sonido exactamente como estaba antes
-de instalar (usa un respaldo que se guarda al instalar).
+Doble clic en "Rescate.cmd": deja el sonido exactamente como estaba antes de
+instalar (usa un respaldo que se guarda al instalar) y no te cambia la
+salida de sonido elegida.
 
-Cambiar cuánto suben los graves
--------------------------------
+Ajustes
+-------
 Abrí con el Bloc de notas: C:\ProgramData\Patagonia Sound\ajustes.ini
-  graves=8   -> entre -12 y 12 (dB)
-  activo=1   -> 0 para apagarlo sin desinstalar
+
+  [motor]
+  activo=1      -> 0 para apagarlo sin desinstalar
+  graves=8      -> refuerzo de graves, entre -12 y 12 (dB)
+  ganancia=0    -> subir el volumen, entre 0 y 12 (dB)
+  limitador=1   -> 1 = nunca satura (dejalo en 1)
+
+  [ecualizador]   cada banda entre -12 y 12 (dB), 0 = sin tocar
+  b31 b62 b125 b250 b500  -> 31 Hz, 62 Hz, 125 Hz, 250 Hz, 500 Hz
+  b1k b2k b4k b8k b16k    -> 1 kHz, 2 kHz, 4 kHz, 8 kHz, 16 kHz
+
 El cambio se aplica la próxima vez que empiece a sonar algo
 (pausá y volvé a dar play).

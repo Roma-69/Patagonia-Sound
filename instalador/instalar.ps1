@@ -1,4 +1,4 @@
-﻿# Instala el motor de Patagonia Sound (paso 1: prueba de graves).
+﻿# Instala el motor de Patagonia Sound FDX (graves, ecualizador de 10 bandas, ganancia y limitador).
 # Antes de tocar nada guarda un respaldo de cada salida de sonido, para que
 # "Rescate" deje todo exactamente como estaba.
 . (Join-Path $PSScriptRoot 'comun.ps1')
@@ -22,10 +22,23 @@ Write-Host '  [1/5] Motor copiado' -ForegroundColor Green
 # 2. Ajustes y permisos: el motor corre como "Servicio local" (audiodg.exe) y
 #    tiene que poder leer los ajustes y anotar si arrancó.
 $ini = Join-Path $DirDatos 'ajustes.ini'
-if (-not (Test-Path $ini)) { "[motor]`r`nactivo=1`r`ngraves=8`r`n" | Set-Content -Path $ini -Encoding ASCII }
+# Se arma el archivo completo, pero respetando lo que ya estaba elegido.
+$motor = [ordered]@{ activo = '1'; graves = '8'; ganancia = '0'; limitador = '1' }
+$eq = [ordered]@{ b31 = '0'; b62 = '0'; b125 = '0'; b250 = '0'; b500 = '0'; b1k = '0'; b2k = '0'; b4k = '0'; b8k = '0'; b16k = '0' }
+if (Test-Path $ini) {
+    foreach ($l in Get-Content $ini) {
+        if ($l -match '^\s*([A-Za-z0-9]+)\s*=\s*(-?\d+)') {
+            if ($motor.Contains($Matches[1])) { $motor[$Matches[1]] = $Matches[2] }
+            elseif ($eq.Contains($Matches[1])) { $eq[$Matches[1]] = $Matches[2] }
+        }
+    }
+}
+$texto = "[motor]`r`n" + (($motor.Keys | ForEach-Object { "$_=$($motor[$_])" }) -join "`r`n") +
+         "`r`n`r`n[ecualizador]`r`n" + (($eq.Keys | ForEach-Object { "$_=$($eq[$_])" }) -join "`r`n") + "`r`n"
+Set-Content -Path $ini -Value $texto -Encoding ASCII -NoNewline
 & icacls $DirDatos /grant '*S-1-5-19:(OI)(CI)M' '*S-1-15-2-1:(OI)(CI)RX' /T /Q | Out-Null
 & icacls $DirPrograma /grant '*S-1-5-19:(OI)(CI)RX' '*S-1-15-2-1:(OI)(CI)RX' /T /Q | Out-Null
-Write-Host '  [2/5] Ajustes listos (graves +8 dB)' -ForegroundColor Green
+Write-Host "  [2/5] Ajustes listos (graves $($motor.graves) dB, ganancia $($motor.ganancia) dB)" -ForegroundColor Green
 
 # Windows corre el audio "protegido" y así no carga motores sin firma digital
 # (lo mismo que necesita Equalizer APO). Se guarda cómo estaba para que Rescate lo deje igual.

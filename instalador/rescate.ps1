@@ -7,6 +7,17 @@ Write-Host ''
 Write-Host '  Patagonia Sound FDX - rescate' -ForegroundColor Yellow
 Write-Host ''
 
+# Windows anota en cada salida cuál está elegida (valores "Role:0/1/2"). Los respaldos son
+# de antes de instalar: se guardan los de ahora y se vuelven a poner después de restaurar,
+# así el sonido sigue saliendo por donde lo tenías.
+$roles = @{}
+foreach ($d in Get-ChildItem "HKLM:\$RaizRender") {
+    $v = Get-ItemProperty $d.PSPath -ErrorAction SilentlyContinue
+    foreach ($n in 'Role:0', 'Role:1', 'Role:2') {
+        if ($null -ne $v.$n) { $roles["$($d.PSChildName)|$n"] = [byte[]]$v.$n }
+    }
+}
+
 # 1. Restaurar cada salida desde su respaldo.
 if (Test-Path $DirRespaldo) {
     foreach ($r in Get-ChildItem $DirRespaldo -Filter '*.reg') {
@@ -24,6 +35,11 @@ if (Test-Path $DirRespaldo) {
             Write-Host "        no se pudo restaurar $($r.BaseName): $_" -ForegroundColor Red
         }
     }
+}
+
+foreach ($k in $roles.Keys) {
+    $id, $n = $k -split '\|', 2
+    try { Set-ItemProperty "HKLM:\$RaizRender\$id" -Name $n -Value $roles[$k] -Type Binary } catch { }
 }
 
 # 2. Por las dudas: sacar el motor de cualquier salida que todavía lo nombre.

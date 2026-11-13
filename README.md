@@ -12,9 +12,11 @@ El motor es un *Audio Processing Object* (APO): una DLL que el audio de Windows 
 
 ## Estado
 
-**Paso 1, prueba de motor:** refuerzo de graves en toda la PC. Sirve para comprobar que Windows carga el motor.
+**Motor:** refuerzo de graves, ecualizador de 10 bandas (31 Hz a 16 kHz), ganancia y limitador (techo -1 dBFS). Se configura en `C:\ProgramData\Patagonia Sound\ajustes.ini` (ver `LEEME.txt`). A más de 96 kHz el motor deja pasar el sonido sin tocarlo.
 
-Próximos pasos: ecualizador de 10 bandas, efectos (claridad, amplitud estéreo, refuerzo de volumen), limitador, y la app con el ícono en la barra de Windows.
+El procesamiento (`motor/Procesador.h`) es C++ puro y tiene pruebas que corren en cualquier máquina (`pruebas/`).
+
+Próximos pasos: la app con el ícono en la barra de Windows (deslizadores, perfiles y visor de ondas) y efectos (claridad, amplitud estéreo).
 
 ## Probarlo
 

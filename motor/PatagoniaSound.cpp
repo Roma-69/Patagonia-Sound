@@ -2,8 +2,8 @@
 // Es un "APO" (Audio Processing Object): una DLL que el motor de audio de Windows
 // (audiodg.exe) carga y mete en la cadena de cada salida de sonido.
 //
-// Paso 1 (prueba de motor): un refuerzo de graves. Si se escucha, Windows cargó
-// el motor de Patagonia y todo lo demás se construye encima.
+// El sonido lo trabaja patagonia::Procesador (Procesador.h): graves, ecualizador
+// de 10 bandas, ganancia y limitador.
 //
 // Reglas del procesamiento en tiempo real (APOProcess): nada de memoria nueva,
 // nada de archivos, nada de esperas. Solo cuentas.
@@ -16,8 +16,6 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <xmmintrin.h>
-#include <pmmintrin.h>
 
 #ifdef _MSC_VER
 #include <audioenginebaseapo.h>
@@ -27,6 +25,7 @@
 #endif
 
 #include "Ajustes.h"
+#include "Procesador.h"
 
 // {C90115C4-8422-4C4D-B4B4-F1EBF7E03B4D}
 static const CLSID CLSID_PatagoniaSound =
@@ -48,29 +47,6 @@ static LONG g_bloqueos = 0;
 #ifndef APOERR_ALREADY_INITIALIZED
 #define APOERR_ALREADY_INITIALIZED ((HRESULT)0x887D0001L)
 #endif
-
-static const UINT32 MAX_CANALES = 16;
-
-// Filtro "low shelf" (refuerzo de graves) de la receta clásica de R. Bristow-Johnson.
-struct Biquad {
-    double b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
-
-    void lowShelf(double frecuenciaMuestreo, double frecuencia, double gananciaDb) {
-        const double A = std::pow(10.0, gananciaDb / 40.0);
-        const double w0 = 2.0 * 3.14159265358979323846 * frecuencia / frecuenciaMuestreo;
-        const double cosw = std::cos(w0), sinw = std::sin(w0);
-        const double alfa = sinw / 2.0 * std::sqrt(2.0); // pendiente S = 1
-        const double raiz = 2.0 * std::sqrt(A) * alfa;
-        const double a0 = (A + 1) + (A - 1) * cosw + raiz;
-        b0 = A * ((A + 1) - (A - 1) * cosw + raiz) / a0;
-        b1 = 2 * A * ((A - 1) - (A + 1) * cosw) / a0;
-        b2 = A * ((A + 1) - (A - 1) * cosw - raiz) / a0;
-        a1 = -2 * ((A - 1) + (A + 1) * cosw) / a0;
-        a2 = ((A + 1) + (A - 1) * cosw - raiz) / a0;
-    }
-};
-
-struct EstadoCanal { double z1 = 0, z2 = 0; };
 
 class MotorPatagonia final : public IAudioProcessingObject,
                              public IAudioProcessingObjectRT,
@@ -106,7 +82,7 @@ public:
 
     // ---- IAudioProcessingObject ----
     STDMETHODIMP Reset() override {
-        for (auto& c : canales_) c = EstadoCanal{};
+        procesador_.reiniciar();
         return S_OK;
     }
     STDMETHODIMP GetLatency(HNSTIME* latencia) override {
@@ -170,12 +146,10 @@ public:
         frecuencia_ = formato.fFramesPerSecond;
 
         // Los ajustes se leen acá (fuera del tiempo real).
-        ajustes_ = Ajustes::leer();
-        filtro_.lowShelf(frecuencia_, 100.0, ajustes_.graves);
-        // Se baja la entrada la mitad de lo que suben los graves para no saturar.
-        preGanancia_ = static_cast<float>(std::pow(10.0, -ajustes_.graves / 40.0));
-        Reset();
-        Ajustes::anotarEstado(frecuencia_, numCanales_, ajustes_);
+        const patagonia::Config cfg = Ajustes::leer();
+        const char* motivo = nullptr;
+        procesar_ = procesador_.preparar(frecuencia_, numCanales_, cfg, &motivo);
+        Ajustes::anotarEstado(frecuencia_, numCanales_, cfg, motivo);
         bloqueado_ = true;
         return S_OK;
     }
@@ -195,8 +169,7 @@ public:
         auto* in = reinterpret_cast<const float*>(entrada->pBuffer);
         auto* out = reinterpret_cast<float*>(salida->pBuffer);
 
-        if (entrada->u32BufferFlags == BUFFER_SILENT || !ajustes_.activo || ajustes_.graves == 0.0 ||
-            numCanales_ == 0) {
+        if (entrada->u32BufferFlags == BUFFER_SILENT || !procesar_) {
             // Sin nada que hacer: el sonido pasa tal cual (o silencio limpio).
             if (out != in) {
                 if (entrada->u32BufferFlags == BUFFER_SILENT) std::memset(out, 0, sizeof(float) * cuadros * numCanales_);
@@ -206,35 +179,7 @@ public:
             salida->u32BufferFlags = entrada->u32BufferFlags;
             return;
         }
-
-        // Números minúsculos ("denormales") que deja el filtro al apagarse un sonido
-        // pueden hacer que el procesador se arrastre y el audio salga robótico:
-        // se tratan como cero mientras dura este bloque y después se deja todo como estaba.
-        const unsigned int mxcsrAnterior = _mm_getcsr();
-        _mm_setcsr(mxcsrAnterior | 0x8040); // FTZ + DAZ
-
-        const UINT32 canalesFiltrados = numCanales_ < MAX_CANALES ? numCanales_ : MAX_CANALES;
-        const Biquad f = filtro_;
-        const float g = preGanancia_;
-        for (UINT32 i = 0; i < cuadros; ++i) {
-            for (UINT32 c = 0; c < numCanales_; ++c) {
-                const size_t k = static_cast<size_t>(i) * numCanales_ + c;
-                double x = static_cast<double>(in[k]) * g;
-                if (c < canalesFiltrados) {
-                    EstadoCanal& e = canales_[c];
-                    // Forma directa transpuesta II.
-                    const double y = f.b0 * x + e.z1;
-                    e.z1 = f.b1 * x - f.a1 * y + e.z2;
-                    e.z2 = f.b2 * x - f.a2 * y;
-                    x = y;
-                }
-                // Sin tope acá: los efectos de la placa que van antes pueden mandar
-                // sonido por encima de 1.0 a propósito, y recortarlo lo dejaba como
-                // una lata. El tope final lo pone Windows; el limitador propio viene después.
-                out[k] = static_cast<float>(x);
-            }
-        }
-        _mm_setcsr(mxcsrAnterior);
+        procesador_.procesar(in, out, cuadros);
         salida->u32ValidFrameCount = cuadros;
         salida->u32BufferFlags = BUFFER_VALID;
     }
@@ -270,10 +215,8 @@ private:
     bool bloqueado_ = false;
     UINT32 numCanales_ = 2;
     float frecuencia_ = 48000.0f;
-    float preGanancia_ = 1.0f;
-    Ajustes ajustes_{};
-    Biquad filtro_{};
-    EstadoCanal canales_[MAX_CANALES]{};
+    bool procesar_ = false;
+    patagonia::Procesador procesador_;
 };
 
 // ---- Fábrica COM ----
