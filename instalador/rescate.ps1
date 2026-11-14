@@ -27,9 +27,12 @@ if (Test-Path $DirRespaldo) {
             foreach ($sub in 'FxProperties', 'Properties') {
                 if (Test-Path "HKLM:\$ruta\$sub") { Enable-PermisoClave "$ruta\$sub" }
             }
-            # Se borra lo que haya y se vuelve a cargar el respaldo tal cual.
-            if (Test-Path "HKLM:\$ruta\FxProperties") { Remove-Item "HKLM:\$ruta\FxProperties" -Recurse -Force }
-            & reg.exe import $r.FullName /reg:64 2>&1 | Out-Null
+            # Se borra lo que haya y se vuelve a cargar el respaldo tal cual. Con reg.exe por cmd:
+            # reg.exe escribe "La operación se completó correctamente" como error, y
+            # Remove-Item de PowerShell falla en estas claves de audio aunque existan.
+            if (Test-Path "HKLM:\$ruta\FxProperties") { & cmd.exe /c "reg.exe delete `"HKLM\$ruta\FxProperties`" /f /reg:64 >nul 2>&1" }
+            & cmd.exe /c "reg.exe import `"$($r.FullName)`" /reg:64 >nul 2>&1"
+            if ($LASTEXITCODE -ne 0) { throw "reg import devolvió $LASTEXITCODE" }
             Write-Host "        restaurado: $($r.BaseName)"
         } catch {
             Write-Host "        no se pudo restaurar $($r.BaseName): $_" -ForegroundColor Red
