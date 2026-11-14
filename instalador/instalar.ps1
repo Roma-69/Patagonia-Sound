@@ -87,7 +87,7 @@ foreach ($s in $salidas) {
         if (-not (Test-Path $respaldo)) {
             # Respaldo completo de la salida, una sola vez (la primera instalación),
             # ya con permiso de lectura. Sin respaldo no se toca la salida.
-            & reg.exe export "HKLM\$ruta" $respaldo /y /reg:64 2>&1 | Out-Null
+            & cmd.exe /c "reg.exe export `"HKLM\$ruta`" `"$respaldo`" /y /reg:64 >nul 2>&1"
             if (-not (Test-Path $respaldo)) { throw 'no pude guardar el respaldo, no la toco' }
         }
         if (-not (Test-Path "HKLM:\$ruta\FxProperties")) { New-Item -Path "HKLM:\$ruta\FxProperties" | Out-Null }
